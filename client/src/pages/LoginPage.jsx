@@ -11,8 +11,7 @@ export default function LoginPage(){
                         placeholder="password"/>
                     <button className="primary">Login</button>
                     <div className="text-center text-black-500 py-2">
-                        Don't have an account yet?
-                        <Link to={'/register'} className="underline text-primary"> Register Now</Link>
+                        Don't have an account yet? <Link to={'/register'} className="underline text-primary"> Register Now</Link>
                     </div>
                 </form>
             </div>
