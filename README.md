@@ -1,108 +1,91 @@
 ﻿# SojournSuites
 import React from 'react';
-import { Page, Text, View, Document, StyleSheet, PDFDownloadLink, Font } from '@react-pdf/renderer';
+import { PDFDownloadLink, Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
 
-// Register a font to support bold text, you can skip this if not needed
-Font.register({
-  family: 'Open Sans',
-  fonts: [
-    { src: 'https://fonts.gstatic.com/s/opensans/v15/mem8YaGs126MiZpBA-UFVZ0b.woff2' }, // Normal
-    { src: 'https://fonts.gstatic.com/s/opensans/v15/mem6YaGs126MiZpBA-UFVp0bbck.woff2', fontWeight: 700 }, // Bold
-  ]
-});
+// Define interfaces for the JSON data structure
+interface PerformanceCheck {
+  metricName: string;
+  thresholdValue: string;
+  MeasuredValue: string;
+  Result: string;
+}
 
-// Create styles
+interface InfrastructureCheck extends PerformanceCheck {}
+
+interface ServiceDetails {
+  overallResult: string;
+  InfrastructureChecks: InfrastructureCheck[];
+  PerformanceChecks: PerformanceCheck[];
+}
+
+interface HostDetails {
+  overallResult: string;
+  InfrastructureChecks: InfrastructureCheck[];
+  AssociatedServices: { [key: string]: ServiceDetails };
+}
+
+interface LambdaDetails {
+  PerformanceChecks: PerformanceCheck[];
+  AvailabilityChecks: PerformanceCheck[];
+}
+
+interface DatabaseDetails {
+  InfrastructureChecks: InfrastructureCheck[];
+  PerformanceChecks: PerformanceCheck[];
+}
+
+interface Data {
+  Guardian_Host_Details: { [key: string]: HostDetails };
+  Guardian_Lambda_Details: { [key: string]: LambdaDetails };
+  Guardian_Database_Details: { [key: string]: DatabaseDetails };
+}
+
+// Styles for PDF
 const styles = StyleSheet.create({
-  page: {
-    flexDirection: 'column',
-    backgroundColor: '#fff',
-    padding: 30,
-  },
-  title: {
-    fontSize: 18,
-    marginBottom: 10,
-    fontFamily: 'Open Sans',
-    fontWeight: 700
-  },
-  table: {
-    display: 'table',
-    width: 'auto',
-    borderStyle: 'solid',
-    borderWidth: 1,
-    borderRightWidth: 0,
-    borderBottomWidth: 0,
-  },
-  tableRow: {
-    flexDirection: 'row',
-    margin: 'auto',
-  },
-  tableColHeader: {
-    width: '25%',
-    borderStyle: 'solid',
-    borderWidth: 1,
-    borderTopWidth: 0,
-    borderLeftWidth: 0,
-    backgroundColor: '#f3f3f3',
-    padding: 5,
-  },
-  tableCol: {
-    width: '25%',
-    borderStyle: 'solid',
-    borderWidth: 1,
-    borderTopWidth: 0,
-    borderLeftWidth: 0,
-    padding: 5,
-  },
+  page: { flexDirection: 'column', padding: 30 },
+  title: { fontSize: 16, marginBottom: 10, fontWeight: 'bold' },
+  table: { display: 'table', width: 'auto', borderStyle: 'solid', borderWidth: 1, borderColor: '#000' },
+  tableRow: { flexDirection: 'row' },
+  tableColHeader: { width: '25%', borderStyle: 'solid', borderWidth: 1, borderColor: '#000', backgroundColor: '#f0f0f0' },
+  tableCol: { width: '25%', borderStyle: 'solid', borderWidth: 1, borderColor: '#000' },
+  tableCell: { margin: 'auto', marginTop: 5, marginBottom: 5 },
 });
-
-// Parse JSON data
-const parseData = (data) => {
-  // Assuming data is structured as per your JSON description
-  return {
-    hosts: Object.entries(data.host_details).map(([hostName, details]) => ({
-      name: hostName,
-      overallResult: details.overallResult || "Unknown",
-      infraChecks: details.InfraChecks || [],
-      associatedServices: Object.entries(details.AssociatedServices || {}).map(([serviceName, serviceDetails]) => ({
-        name: serviceName,
-        overallResult: serviceDetails.overallResult || "Unknown",
-        infraChecks: serviceDetails.InfraChecks || [],
-        performanceChecks: serviceDetails.PerformanceChecks || [],
-      })),
-    })),
-    lambdas: Object.entries(data.lambda_details || {}).map(([lambdaName, lambdaDetails]) => ({
-      name: lambdaName,
-      performanceChecks: lambdaDetails.PerformanceChecks || [],
-      availabilityChecks: lambdaDetails.AvailabilityChecks || [],
-    })),
-    databases: Object.entries(data.database_details || {}).map(([dbName, dbDetails]) => ({
-      name: dbName,
-      infraChecks: dbDetails.InfraChecks || [],
-      performanceChecks: dbDetails.PerformanceChecks || [],
-    })),
-  };
-};
 
 // Document Component
-const MyDocument = ({ data }) => {
-  const parsedData = parseData(data);
-
-  return (
-    <Document>
-      <Page style={styles.page}>
-        {parsedData.hosts.map((host, index) => (
-          <View key={index}>
-            <Text style={styles.title}>{host.name} - Overall: {host.overallResult}</Text>
-            <View style={styles.table}>
-              <View style={styles.tableRow}>
-                <Text style={styles.tableColHeader}>Metric Name</Text>
-                <Text style={styles.tableColHeader}>Result</Text>
-                <Text style={styles.tableColHeader}>Threshold</Text>
-                <Text style={styles.tableColHeader}>Measured Value</Text>
+const MyDocument: React.FC<{ data: Data }> = ({ data }) => (
+  <Document>
+    <Page style={styles.page}>
+      <Text style={styles.title}>Guardian Host Details</Text>
+      {Object.entries(data.Guardian_Host_Details).map(([hostName, hostDetails], index) => (
+        <View key={index}>
+          <Text style={styles.title}>{hostName} - Overall Result: {hostDetails.overallResult}</Text>
+          <View style={styles.table}>
+            <View style={styles.tableRow}>
+              <Text style={styles.tableColHeader}>Metric Name</Text>
+              <Text style={styles.tableColHeader}>Result</Text>
+              <Text style={styles.tableColHeader}>Threshold</Text>
+              <Text style={styles.tableColHeader}>Measured Value</Text>
+            </View>
+            {hostDetails.InfrastructureChecks.map((check, idx) => (
+              <View key={idx} style={styles.tableRow}>
+                <Text style={styles.tableCol}>{check.metricName}</Text>
+                <Text style={styles.tableCol}>{check.Result}</Text>
+                <Text style={styles.tableCol}>{check.thresholdValue}</Text>
+                <Text style={styles.tableCol}>{check.MeasuredValue}</Text>
               </View>
-              {host.infraChecks.map((check, idx) => (
-                <View key={idx} style={styles.tableRow}>
-                  <Text style={styles.tableCol}>{check.metricName}</Text>
-                  <Text style={styles.tableCol}>{check.Result}</Text>
-                  <Text style={styles.tableCol}>{check.thresholdValue}</Text>
-                  <Text style={styles.tableCol}>{check.MessureValue}</Text>
+            ))}
+          </View>
+        </View>
+      ))}
+    </Page>
+  </Document>
+);
+
+// Component to provide download link
+const DownloadPDF: React.FC<{ data: Data }> = ({ data }) => (
+  <PDFDownloadLink document={<MyDocument data={data} />} fileName="detailed_report.pdf">
+    {({ blob, url, loading, error }) => (loading ? 'Loading document...' : 'Download now!')}
+  </PDFDownloadLink>
+);
+
+export default DownloadPDF;
